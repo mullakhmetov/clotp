@@ -28,6 +28,17 @@ func TestTOTP_At(t *testing.T) {
 			wantValues: []string{"94287082", "07081804", "14050471", "89005924", "69279037", "65353130"},
 		},
 		{
+			name: "sha1",
+			opts: Opts{
+				Digits:    8,
+				Secret:    "12345678901234567890",
+				Algorithm: sha1.New,
+			},
+			step:       1,
+			timestamps: []int64{59, 1111111109, 1111111111, 1234567890, 2000000000, 20000000000},
+			wantValues: []string{"24083773", "14510233", "54073950", "03965462", "21054266", "04468884"},
+		},
+		{
 			name: "sha256",
 			opts: Opts{
 				Digits:    6,
