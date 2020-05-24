@@ -37,7 +37,9 @@ type OTP struct {
 // Generate returns otp value based on given counter
 func (o *OTP) Generate(counter uint64) string {
 	mac := hmac.New(o.Algorithm, o.secret())
-	mac.Write(itob(counter))
+	if _, err := mac.Write(itob(counter)); err != nil {
+		panic(err)
+	}
 
 	hmacResult := mac.Sum(nil)
 	offset := int(hmacResult[len(hmacResult)-1] & 0xf)

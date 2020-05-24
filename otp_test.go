@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"testing"
 )
 
@@ -74,6 +75,27 @@ func TestGenerate(t *testing.T) {
 				"67579288",
 				"83895912",
 				"23184989",
+			},
+		},
+		{
+			name: "sha512 8 digits",
+			opts: Opts{
+				Digits:    8,
+				Algorithm: sha512.New,
+				Secret:    "12345678901234567890",
+			},
+			counters: []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			wantValues: []string{
+				"04125165",
+				"69342147",
+				"71730102",
+				"73778726",
+				"81937510",
+				"16848329",
+				"36266680",
+				"22588359",
+				"45039399",
+				"33643409",
 			},
 		},
 	} {
