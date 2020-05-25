@@ -50,14 +50,14 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name:  "check fields parsing",
 			input: fullConfig,
-			want: &Config{Secrets: []secret{
+			want: &Config{Items: []item{
 				{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
 			}},
 		},
 		{
 			name:  "check empty fields",
 			input: onlySecret,
-			want: &Config{Secrets: []secret{
+			want: &Config{Items: []item{
 				{Name: "Name-2", Key: "secret-key-2"}},
 			},
 		},
@@ -69,7 +69,7 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name:  "check multiple secrets",
 			input: multiple,
-			want: &Config{Secrets: []secret{
+			want: &Config{Items: []item{
 				{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
 				{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 			}},
@@ -77,7 +77,7 @@ func TestLoadConfig(t *testing.T) {
 	} {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			got, err := LoadConfig(bytes.NewReader(c.input))
+			got, err := loadConfig(bytes.NewReader(c.input))
 			if err != nil {
 				panic(err)
 			}

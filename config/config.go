@@ -1,7 +1,10 @@
 package config
 
 import (
+	"bytes"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -12,7 +15,7 @@ const (
 	fileName = "config.ini"
 )
 
-type secret struct {
+type item struct {
 	Name      string
 	Issuer    string
 	Key       string
@@ -21,14 +24,15 @@ type secret struct {
 }
 
 type Config struct {
-	Secrets []secret
+	Items []item
 }
 
-func DefaultConfigDir() string {
+func defaultConfigDir() string {
 	return filepath.Join(os.Getenv("HOME"), ".config", "clotp")
 }
 
-func LoadConfig(f io.Reader) (*Config, error) {
+// loadConfig parses `f` ini config to Config struct
+func loadConfig(f io.Reader) (*Config, error) {
 	var config Config
 
 	cfg, err := ini.Load(f)
@@ -42,7 +46,7 @@ func LoadConfig(f io.Reader) (*Config, error) {
 			continue
 		}
 
-		s := secret{
+		s := item{
 			Name:      section.Name(),
 			Issuer:    section.Key("issuer").String(),
 			Key:       key.String(),
@@ -50,8 +54,42 @@ func LoadConfig(f io.Reader) (*Config, error) {
 			Digits:    section.Key("digits").MustInt(),
 		}
 
-		config.Secrets = append(config.Secrets, s)
+		config.Items = append(config.Items, s)
 	}
 
 	return &config, nil
+}
+
+// NewConfig reads config file if it exist or creates new empty one if doesn't
+func NewConfig() (*Config, error) {
+	dir := defaultConfigDir()
+	cfgPath := filepath.Join(dir, fileName)
+
+	if !fileExists(cfgPath) {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			return nil, fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		f, err := os.Create(cfgPath)
+		if err != nil {
+			return nil, fmt.Errorf("failred to create config file: %w", err)
+		}
+
+		return loadConfig(f)
+	}
+
+	b, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return nil, fmt.Errorf("failied to read config file: %w", err)
+	}
+
+	return loadConfig(bytes.NewBuffer(b))
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
