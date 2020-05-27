@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -57,15 +58,15 @@ func TestConfig_Read(t *testing.T) {
 		{
 			name:  "check fields parsing",
 			input: fullConfig,
-			want: &Config{Items: []Item{
-				{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
+			want: &Config{Items: map[string]Item{
+				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
 			}},
 		},
 		{
 			name:  "check empty fields",
 			input: onlySecret,
-			want: &Config{Items: []Item{
-				{Name: "Name-2", Key: "secret-key-2"}},
+			want: &Config{Items: map[string]Item{
+				"Name-2": {Name: "Name-2", Key: "secret-key-2"}},
 			},
 		},
 		{
@@ -76,9 +77,9 @@ func TestConfig_Read(t *testing.T) {
 		{
 			name:  "check multiple secrets",
 			input: multiple,
-			want: &Config{Items: []Item{
-				{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
-				{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
+			want: &Config{Items: map[string]Item{
+				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
+				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 			}},
 		},
 	} {
@@ -117,23 +118,23 @@ func TestConfig_Write(t *testing.T) {
 	}{
 		{
 			name: "check fields parsing",
-			cfg: &Config{Items: []Item{
-				{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
+			cfg: &Config{Items: map[string]Item{
+				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
 			}},
 			want: fullConfig,
 		},
 		{
 			name: "check empty fields",
-			cfg: &Config{Items: []Item{
-				{Name: "Name-2", Key: "secret-key-2"}},
+			cfg: &Config{Items: map[string]Item{
+				"Name-2": {Name: "Name-2", Key: "secret-key-2"}},
 			},
 			want: onlySecret,
 		},
 		{
 			name: "check multiple secrets",
-			cfg: &Config{Items: []Item{
-				{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
-				{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
+			cfg: &Config{Items: map[string]Item{
+				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
+				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 			}},
 			want: multiple,
 		},
@@ -198,9 +199,9 @@ func TestNewConfig_Read(t *testing.T) {
 	}
 
 	want := &Config{
-		Items: []Item{
-			{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
-			{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
+		Items: map[string]Item{
+			"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
+			"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 		},
 		opts: Opts{path: dir, filename: filepath.Base(file.Name())},
 	}
@@ -238,5 +239,71 @@ func TestItemValidate(t *testing.T) {
 				t.Errorf("wrong validation result, should be %t", c.want)
 			}
 		})
+	}
+}
+
+func TestConfigAdd(t *testing.T) {
+	config := Config{}
+
+	for _, c := range []struct {
+		name string
+		item Item
+		err  error
+	}{
+		{
+			name: "no name",
+			item: Item{Key: "1"},
+			err:  ErrInvalidItem,
+		},
+		{
+			name: "no key",
+			item: Item{Name: "n"},
+			err:  ErrInvalidItem,
+		},
+		{
+			name: "valid #1",
+			item: Item{Name: "n", Key: "k"},
+		},
+		{
+			name: "duplicate",
+			item: Item{Name: "n", Key: "k2"},
+			err:  ErrItemAlreadyExists,
+		},
+		{
+			name: "valid #2",
+			item: Item{Name: "n2", Key: "k"},
+		},
+	} {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			err := config.Add(c.item)
+			if err != nil {
+				if c.err == nil {
+					t.Errorf("unwanted error: %v", err)
+					return
+				}
+
+				if !errors.Is(err, c.err) {
+					t.Errorf("error should match with %v", c.err)
+					return
+				}
+
+				return
+			}
+
+			if c.err != nil {
+				t.Error("error shouldn't be nil")
+				return
+			}
+		})
+	}
+
+	want := map[string]Item{
+		"n":  {Name: "n", Key: "k"},
+		"n2": {Name: "n2", Key: "k"},
+	}
+
+	if !reflect.DeepEqual(want, config.Items) {
+		t.Errorf("wrong config items state, want: %+v != got: %+v", want, config.Items)
 	}
 }

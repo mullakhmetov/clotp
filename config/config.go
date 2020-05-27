@@ -42,9 +42,10 @@ type Opts struct {
 
 type Config struct {
 	opts  Opts
-	Items []Item
+	Items map[string]Item
 }
 
+// Read reads config from underlying file
 func (c *Config) Read(r io.Reader) error {
 	cfg, err := ini.Load(r)
 	if err != nil {
@@ -65,12 +66,15 @@ func (c *Config) Read(r io.Reader) error {
 			continue
 		}
 
-		c.Items = append(c.Items, item)
+		if err := c.add(item); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
+// Writes config to underlying file
 func (c Config) Write(w io.WriteCloser) error {
 	cfg := ini.Empty()
 
@@ -96,8 +100,27 @@ func (c Config) Write(w io.WriteCloser) error {
 	return nil
 }
 
-func (c *Config) Add(item Item) {
+// Add adds given item to config
+func (c *Config) Add(item Item) error {
+	if ok := item.Validate(); !ok {
+		return ErrInvalidItem
+	}
 
+	return c.add(item)
+}
+
+func (c *Config) add(item Item) error {
+	if c.Items == nil {
+		c.Items = make(map[string]Item)
+	}
+
+	if _, ok := c.Items[item.Name]; ok {
+		return fmt.Errorf("%w: %s", ErrItemAlreadyExists, item.Name)
+	}
+
+	c.Items[item.Name] = item
+
+	return nil
 }
 
 // NewDefaultConfig reads config file if it exist or creates new empty one if doesn't
