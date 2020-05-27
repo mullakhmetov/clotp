@@ -109,6 +109,15 @@ func (c *Config) Add(item Item) error {
 	return c.add(item)
 }
 
+func (c Config) List() []Item {
+	items := make([]Item, 0, len(c.Items))
+	for _, item := range c.Items {
+		items = append(items, item)
+	}
+
+	return items
+}
+
 func (c *Config) add(item Item) error {
 	if c.Items == nil {
 		c.Items = make(map[string]Item)

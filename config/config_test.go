@@ -307,3 +307,19 @@ func TestConfigAdd(t *testing.T) {
 		t.Errorf("wrong config items state, want: %+v != got: %+v", want, config.Items)
 	}
 }
+
+func TestConfigList(t *testing.T) {
+	config := Config{}
+
+	items := []Item{{Name: "n", Key: "k"}, {Name: "n2", Key: "k"}}
+	for _, item := range items {
+		if err := config.Add(item); err != nil {
+			t.Errorf("unwanted error: %w", err)
+			return
+		}
+	}
+
+	if got := config.List(); !reflect.DeepEqual(items, got) {
+		t.Errorf("wong config.List() result, want: %+v != got: %+v", got, items)
+	}
+}
