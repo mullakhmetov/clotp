@@ -15,12 +15,24 @@ const (
 	defaultConfigName = "config.ini"
 )
 
-type item struct {
+type Item struct {
 	Name      string `ini:"-"`
 	Issuer    string `ini:"issuer,omitempty"`
 	Key       string `ini:"secret"`
 	Algorithm string `ini:"algorithm,omitempty"`
 	Digits    int    `ini:"digits,omitempty"`
+}
+
+func (i Item) Validate() bool {
+	if i.Name == "" {
+		return false
+	}
+
+	if i.Key == "" {
+		return false
+	}
+
+	return true
 }
 
 type Opts struct {
@@ -30,7 +42,7 @@ type Opts struct {
 
 type Config struct {
 	opts  Opts
-	Items []item
+	Items []Item
 }
 
 func (c *Config) Read(r io.Reader) error {
@@ -44,7 +56,7 @@ func (c *Config) Read(r io.Reader) error {
 			continue
 		}
 
-		item := item{Name: section.Name()}
+		item := Item{Name: section.Name()}
 		if err := section.MapTo(&item); err != nil {
 			return err
 		}
@@ -82,6 +94,10 @@ func (c Config) Write(w io.WriteCloser) error {
 	}
 
 	return nil
+}
+
+func (c *Config) Add(item Item) {
+
 }
 
 // NewDefaultConfig reads config file if it exist or creates new empty one if doesn't

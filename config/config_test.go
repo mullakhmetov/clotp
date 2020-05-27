@@ -57,14 +57,14 @@ func TestConfig_Read(t *testing.T) {
 		{
 			name:  "check fields parsing",
 			input: fullConfig,
-			want: &Config{Items: []item{
+			want: &Config{Items: []Item{
 				{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
 			}},
 		},
 		{
 			name:  "check empty fields",
 			input: onlySecret,
-			want: &Config{Items: []item{
+			want: &Config{Items: []Item{
 				{Name: "Name-2", Key: "secret-key-2"}},
 			},
 		},
@@ -76,7 +76,7 @@ func TestConfig_Read(t *testing.T) {
 		{
 			name:  "check multiple secrets",
 			input: multiple,
-			want: &Config{Items: []item{
+			want: &Config{Items: []Item{
 				{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
 				{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 			}},
@@ -117,21 +117,21 @@ func TestConfig_Write(t *testing.T) {
 	}{
 		{
 			name: "check fields parsing",
-			cfg: &Config{Items: []item{
+			cfg: &Config{Items: []Item{
 				{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
 			}},
 			want: fullConfig,
 		},
 		{
 			name: "check empty fields",
-			cfg: &Config{Items: []item{
+			cfg: &Config{Items: []Item{
 				{Name: "Name-2", Key: "secret-key-2"}},
 			},
 			want: onlySecret,
 		},
 		{
 			name: "check multiple secrets",
-			cfg: &Config{Items: []item{
+			cfg: &Config{Items: []Item{
 				{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
 				{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 			}},
@@ -198,7 +198,7 @@ func TestNewConfig_Read(t *testing.T) {
 	}
 
 	want := &Config{
-		Items: []item{
+		Items: []Item{
 			{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
 			{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
 		},
@@ -207,5 +207,36 @@ func TestNewConfig_Read(t *testing.T) {
 
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("wrong config, want: %+v != got: %+v", want, got)
+	}
+}
+
+func TestItemValidate(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		item Item
+		want bool
+	}{
+		{
+			name: "no name",
+			item: Item{Key: "1"},
+			want: false,
+		},
+		{
+			name: "no key",
+			item: Item{Name: "n"},
+			want: false,
+		},
+		{
+			name: "valid",
+			item: Item{Name: "n", Key: "k"},
+			want: true,
+		},
+	} {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.item.Validate(); got != c.want {
+				t.Errorf("wrong validation result, should be %t", c.want)
+			}
+		})
 	}
 }
