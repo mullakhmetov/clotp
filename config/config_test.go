@@ -20,6 +20,7 @@ issuer=issuer-1
 secret=secret-key-1
 algorithm=sha1
 digits=6
+step=30
 `)
 
 	onlySecret = []byte(`[Name-2]
@@ -37,12 +38,14 @@ issuer=issuer-4
 secret=secret-key-4
 algorithm=sha1
 digits=6
+step=30
 
 [Name-5]
 issuer=issuer-5
 secret=secret-key-5
 algorithm=sha1
 digits=6
+step=60
 `)
 )
 
@@ -59,7 +62,7 @@ func TestConfig_Read(t *testing.T) {
 			name:  "check fields parsing",
 			input: fullConfig,
 			want: &Config{Items: map[string]Item{
-				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
+				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6, Step: 30},
 			}},
 		},
 		{
@@ -78,8 +81,8 @@ func TestConfig_Read(t *testing.T) {
 			name:  "check multiple secrets",
 			input: multiple,
 			want: &Config{Items: map[string]Item{
-				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
-				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
+				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
+				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
 			}},
 		},
 	} {
@@ -119,7 +122,7 @@ func TestConfig_Write(t *testing.T) {
 		{
 			name: "check fields parsing",
 			cfg: &Config{Items: map[string]Item{
-				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6},
+				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6, Step: 30},
 			}},
 			want: fullConfig,
 		},
@@ -133,8 +136,8 @@ func TestConfig_Write(t *testing.T) {
 		{
 			name: "check multiple secrets",
 			cfg: &Config{Items: map[string]Item{
-				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
-				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
+				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
+				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
 			}},
 			want: multiple,
 		},
@@ -200,8 +203,8 @@ func TestNewConfig_Read(t *testing.T) {
 
 	want := &Config{
 		Items: map[string]Item{
-			"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6},
-			"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6},
+			"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
+			"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
 		},
 		opts: Opts{path: dir, filename: filepath.Base(file.Name())},
 	}
@@ -225,6 +228,11 @@ func TestItemValidate(t *testing.T) {
 		{
 			name: "no key",
 			item: Item{Name: "n"},
+			want: false,
+		},
+		{
+			name: "negative step",
+			item: Item{Name: "n", Step: -1},
 			want: false,
 		},
 		{
@@ -258,6 +266,11 @@ func TestConfigAdd(t *testing.T) {
 		{
 			name: "no key",
 			item: Item{Name: "n"},
+			err:  ErrInvalidItem,
+		},
+		{
+			name: "negative step",
+			item: Item{Name: "foo", Key: "bar", Step: -1},
 			err:  ErrInvalidItem,
 		},
 		{

@@ -21,6 +21,7 @@ type Item struct {
 	Key       string `ini:"secret"`
 	Algorithm string `ini:"algorithm,omitempty"`
 	Digits    int    `ini:"digits,omitempty"`
+	Step      int    `ini:"step,omitempty"`
 }
 
 func (i Item) Validate() bool {
@@ -29,6 +30,10 @@ func (i Item) Validate() bool {
 	}
 
 	if i.Key == "" {
+		return false
+	}
+
+	if i.Step < 0 {
 		return false
 	}
 
