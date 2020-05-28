@@ -6,13 +6,15 @@ import (
 	"crypto/sha512"
 	"testing"
 	"time"
+
+	"github.com/mullakhmetov/clotp/config"
 )
 
 func TestTOTP_At(t *testing.T) {
 	for _, c := range []struct {
 		name       string
 		opts       Opts
-		step       uint64
+		step       int
 		timestamps []int64
 		wantValues []string
 	}{
@@ -82,5 +84,30 @@ func TestTOTP_Now(t *testing.T) {
 
 	if totp.Now() != totp.At(time.Now().Unix()) {
 		t.Errorf("wrong Now() value")
+	}
+}
+
+func TestNewFromConfigItem(t *testing.T) {
+	item := config.Item{
+		Name:      "n",
+		Issuer:    "issuer",
+		Key:       "12345678901234567890",
+		Algorithm: "sha1",
+		Digits:    6,
+		Step:      30,
+	}
+
+	totp := NewFromConfigItem(item)
+
+	if item.Digits != totp.Digits {
+		t.Errorf("wrong digits value")
+	}
+
+	if item.Key != totp.Secret {
+		t.Errorf("wrong secret value")
+	}
+
+	if item.Step != totp.TimeStep {
+		t.Errorf("wrong timestep value")
 	}
 }

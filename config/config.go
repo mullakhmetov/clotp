@@ -40,6 +40,10 @@ func (i Item) Validate() bool {
 	return true
 }
 
+func (i Item) Digest() func() hash.Hash {
+	return i.digest
+}
+
 type Opts struct {
 	path     string
 	filename string

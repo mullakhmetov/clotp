@@ -2,9 +2,11 @@ package main
 
 import (
 	"time"
+
+	"github.com/mullakhmetov/clotp/config"
 )
 
-const defaultTimeStep uint64 = 30
+const defaultTimeStep = 30
 
 // DefaultOTP returns 6-digits HMAC-SHA-1 OTP based on given secret and counter
 func NewDefaultTOTP(secret string) *TOTP {
@@ -12,13 +14,22 @@ func NewDefaultTOTP(secret string) *TOTP {
 }
 
 // NewOTP returns OTP object
-func NewTOTP(opts Opts, timestep uint64) *TOTP {
+func NewTOTP(opts Opts, timestep int) *TOTP {
 	return &TOTP{NewOTP(opts), timestep}
+}
+
+// NewFromConfigItem creates creates TOTP from config item object
+func NewFromConfigItem(item config.Item) *TOTP {
+	return NewTOTP(Opts{
+		Digits:    item.Digits,
+		Secret:    item.Key,
+		Algorithm: item.Digest(),
+	}, item.Step)
 }
 
 type TOTP struct {
 	*OTP
-	TimeStep uint64
+	TimeStep int
 }
 
 func (t *TOTP) Now() string {
