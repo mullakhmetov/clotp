@@ -3,12 +3,11 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/ini.v1"
 )
 
 const (
@@ -20,8 +19,9 @@ type Item struct {
 	Issuer    string `ini:"issuer,omitempty"`
 	Key       string `ini:"secret"`
 	Algorithm string `ini:"algorithm,omitempty"`
-	Digits    int    `ini:"digits,omitempty"`
-	Step      int    `ini:"step,omitempty"`
+	digest    func() hash.Hash
+	Digits    int `ini:"digits,omitempty"`
+	Step      int `ini:"step,omitempty"`
 }
 
 func (i Item) Validate() bool {
@@ -45,32 +45,26 @@ type Opts struct {
 	filename string
 }
 
-type Config struct {
-	opts  Opts
-	Items map[string]Item
+type mapper interface {
+	Read(io.Reader) ([]*Item, error)
+	Write(items []*Item, w io.WriteCloser) error
 }
 
-// Read reads config from underlying file
+type Config struct {
+	mapper    mapper
+	opts      Opts
+	itemNames map[string]struct{}
+	Items     []*Item
+}
+
+// Read reads config via mapper
 func (c *Config) Read(r io.Reader) error {
-	cfg, err := ini.Load(r)
+	items, err := c.mapper.Read(r)
 	if err != nil {
 		return err
 	}
 
-	for _, section := range cfg.Sections() {
-		if section.Name() == ini.DefaultSection {
-			continue
-		}
-
-		item := Item{Name: section.Name()}
-		if err := section.MapTo(&item); err != nil {
-			return err
-		}
-
-		if item.Key == "" {
-			continue
-		}
-
+	for _, item := range items {
 		if err := c.add(item); err != nil {
 			return err
 		}
@@ -79,34 +73,13 @@ func (c *Config) Read(r io.Reader) error {
 	return nil
 }
 
-// Writes config to underlying file
+// Writes config via mapper
 func (c Config) Write(w io.WriteCloser) error {
-	cfg := ini.Empty()
-
-	for _, item := range c.Items {
-		section, err := cfg.NewSection(item.Name)
-		if err != nil {
-			return err
-		}
-		err = section.ReflectFrom(&item)
-		if err != nil {
-			return err
-		}
-	}
-
-	if _, err := cfg.WriteTo(w); err != nil {
-		return err
-	}
-
-	if err := w.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return c.mapper.Write(c.Items, w)
 }
 
 // Add adds given item to config
-func (c *Config) Add(item Item) error {
+func (c *Config) Add(item *Item) error {
 	if ok := item.Validate(); !ok {
 		return ErrInvalidItem
 	}
@@ -114,25 +87,21 @@ func (c *Config) Add(item Item) error {
 	return c.add(item)
 }
 
-func (c Config) List() []Item {
-	items := make([]Item, 0, len(c.Items))
-	for _, item := range c.Items {
-		items = append(items, item)
-	}
-
-	return items
+func (c Config) List() []*Item {
+	return c.Items
 }
 
-func (c *Config) add(item Item) error {
-	if c.Items == nil {
-		c.Items = make(map[string]Item)
+func (c *Config) add(item *Item) error {
+	if c.itemNames == nil {
+		c.itemNames = make(map[string]struct{})
 	}
 
-	if _, ok := c.Items[item.Name]; ok {
+	if _, ok := c.itemNames[item.Name]; ok {
 		return fmt.Errorf("%w: %s", ErrItemAlreadyExists, item.Name)
 	}
 
-	c.Items[item.Name] = item
+	c.itemNames[item.Name] = struct{}{}
+	c.Items = append(c.Items, item)
 
 	return nil
 }
@@ -163,7 +132,7 @@ func NewConfig(opts Opts) (*Config, error) {
 		}
 	}
 
-	cfg := &Config{opts: opts}
+	cfg := &Config{mapper: NewIniMapper(), opts: opts}
 
 	cfgPath := filepath.Join(opts.path, opts.filename)
 
@@ -194,10 +163,7 @@ func NewConfig(opts Opts) (*Config, error) {
 
 func pathExists(filename string) bool {
 	_, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return !os.IsNotExist(err)
 }
 
 func defaultConfigDir() string {

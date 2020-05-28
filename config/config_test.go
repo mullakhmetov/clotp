@@ -54,47 +54,57 @@ func TestConfig_Read(t *testing.T) {
 	ini.PrettyFormat = false
 
 	for _, c := range []struct {
-		name  string
-		input []byte
-		want  *Config
+		name   string
+		mapper mapper
+		input  []byte
+		want   []*Item
 	}{
 		{
-			name:  "check fields parsing",
-			input: fullConfig,
-			want: &Config{Items: map[string]Item{
-				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6, Step: 30},
-			}},
-		},
-		{
-			name:  "check empty fields",
-			input: onlySecret,
-			want: &Config{Items: map[string]Item{
-				"Name-2": {Name: "Name-2", Key: "secret-key-2"}},
+			name:   "check fields parsing",
+			mapper: NewIniMapper(),
+			input:  fullConfig,
+			want: []*Item{
+				{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6, Step: 30},
 			},
 		},
 		{
-			name:  "check required secret field",
-			input: noSecret,
-			want:  &Config{},
+			name:   "check empty fields",
+			mapper: NewIniMapper(),
+			input:  onlySecret,
+			want: []*Item{
+				{Name: "Name-2", Key: "secret-key-2"},
+			},
+		},
+
+		{
+			name:   "check required secret field",
+			mapper: NewIniMapper(),
+			input:  noSecret,
 		},
 		{
-			name:  "check multiple secrets",
-			input: multiple,
-			want: &Config{Items: map[string]Item{
-				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
-				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
-			}},
+			name:   "check multiple secrets",
+			mapper: NewIniMapper(),
+			input:  multiple,
+			want: []*Item{
+				{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
+				{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
+			},
 		},
 	} {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			cfg := &Config{}
+			cfg := &Config{mapper: c.mapper}
 			if err := cfg.Read(bytes.NewReader(c.input)); err != nil {
 				panic(err)
 			}
 
-			if !reflect.DeepEqual(c.want, cfg) {
-				t.Errorf("wrong config loading, want: %+v != got: %+v", c.want, cfg)
+			// function type is incomparable
+			for _, i := range cfg.Items {
+				i.digest = nil
+			}
+
+			if !reflect.DeepEqual(c.want, cfg.Items) {
+				t.Errorf("wrong config loading, want: %+v != got: %+v", c.want, cfg.Items)
 			}
 		})
 	}
@@ -121,24 +131,33 @@ func TestConfig_Write(t *testing.T) {
 	}{
 		{
 			name: "check fields parsing",
-			cfg: &Config{Items: map[string]Item{
-				"Name-1": {Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6, Step: 30},
-			}},
+			cfg: &Config{
+				mapper: NewIniMapper(),
+				Items: []*Item{
+					{Name: "Name-1", Issuer: "issuer-1", Key: "secret-key-1", Algorithm: "sha1", Digits: 6, Step: 30},
+				},
+			},
 			want: fullConfig,
 		},
 		{
 			name: "check empty fields",
-			cfg: &Config{Items: map[string]Item{
-				"Name-2": {Name: "Name-2", Key: "secret-key-2"}},
+			cfg: &Config{
+				mapper: NewIniMapper(),
+				Items: []*Item{
+					{Name: "Name-2", Key: "secret-key-2"},
+				},
 			},
 			want: onlySecret,
 		},
 		{
 			name: "check multiple secrets",
-			cfg: &Config{Items: map[string]Item{
-				"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
-				"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
-			}},
+			cfg: &Config{
+				mapper: NewIniMapper(),
+				Items: []*Item{
+					{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
+					{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
+				},
+			},
 			want: multiple,
 		},
 	} {
@@ -172,7 +191,7 @@ func TestNewConfig_Init(t *testing.T) {
 		panic(err)
 	}
 
-	want := &Config{opts: Opts{path: dir, filename: defaultConfigName}}
+	want := &Config{mapper: NewIniMapper(), opts: Opts{path: dir, filename: defaultConfigName}}
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("wrong config, want: %+v != got: %+v", want, got)
 	}
@@ -201,10 +220,17 @@ func TestNewConfig_Read(t *testing.T) {
 		panic(err)
 	}
 
+	// function type is incomparable
+	for _, i := range got.Items {
+		i.digest = nil
+	}
+
 	want := &Config{
-		Items: map[string]Item{
-			"Name-4": {Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
-			"Name-5": {Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
+		mapper:    NewIniMapper(),
+		itemNames: map[string]struct{}{"Name-4": {}, "Name-5": {}},
+		Items: []*Item{
+			{Name: "Name-4", Issuer: "issuer-4", Key: "secret-key-4", Algorithm: "sha1", Digits: 6, Step: 30},
+			{Name: "Name-5", Issuer: "issuer-5", Key: "secret-key-5", Algorithm: "sha1", Digits: 6, Step: 60},
 		},
 		opts: Opts{path: dir, filename: filepath.Base(file.Name())},
 	}
@@ -255,36 +281,36 @@ func TestConfigAdd(t *testing.T) {
 
 	for _, c := range []struct {
 		name string
-		item Item
+		item *Item
 		err  error
 	}{
 		{
 			name: "no name",
-			item: Item{Key: "1"},
+			item: &Item{Key: "1"},
 			err:  ErrInvalidItem,
 		},
 		{
 			name: "no key",
-			item: Item{Name: "n"},
+			item: &Item{Name: "n"},
 			err:  ErrInvalidItem,
 		},
 		{
 			name: "negative step",
-			item: Item{Name: "foo", Key: "bar", Step: -1},
+			item: &Item{Name: "foo", Key: "bar", Step: -1},
 			err:  ErrInvalidItem,
 		},
 		{
 			name: "valid #1",
-			item: Item{Name: "n", Key: "k"},
+			item: &Item{Name: "n", Key: "k"},
 		},
 		{
 			name: "duplicate",
-			item: Item{Name: "n", Key: "k2"},
+			item: &Item{Name: "n", Key: "k2"},
 			err:  ErrItemAlreadyExists,
 		},
 		{
 			name: "valid #2",
-			item: Item{Name: "n2", Key: "k"},
+			item: &Item{Name: "n2", Key: "k"},
 		},
 	} {
 		c := c
@@ -311,9 +337,14 @@ func TestConfigAdd(t *testing.T) {
 		})
 	}
 
-	want := map[string]Item{
-		"n":  {Name: "n", Key: "k"},
-		"n2": {Name: "n2", Key: "k"},
+	want := []*Item{
+		{Name: "n", Key: "k"},
+		{Name: "n2", Key: "k"},
+	}
+
+	// function type is incomparable
+	for _, i := range config.Items {
+		i.digest = nil
 	}
 
 	if !reflect.DeepEqual(want, config.Items) {
@@ -324,7 +355,7 @@ func TestConfigAdd(t *testing.T) {
 func TestConfigList(t *testing.T) {
 	config := Config{}
 
-	items := []Item{{Name: "n", Key: "k"}, {Name: "n2", Key: "k"}}
+	items := []*Item{{Name: "n", Key: "k"}, {Name: "n2", Key: "k"}}
 	for _, item := range items {
 		if err := config.Add(item); err != nil {
 			t.Errorf("unwanted error: %w", err)
