@@ -1,30 +1,42 @@
 package config
 
 import (
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"fmt"
 	"hash"
 	"io"
+	"os"
+	"path/filepath"
 
 	"gopkg.in/ini.v1"
 )
 
-func NewIniMapper() *IniMapper {
-	return &IniMapper{}
+type parseAlgorithmFn func(string) (func() hash.Hash, error)
+
+func NewIniMapper(opts Opts, fn parseAlgorithmFn) *IniMapper {
+	path := filepath.Join(opts.path, opts.filename)
+	return &IniMapper{opts, path, fn}
 }
 
-type IniMapper struct{}
+type IniMapper struct {
+	opts Opts
+	path string
+
+	parseAlgorithmFn
+}
 
 // Read reads config items from reader
-func (m *IniMapper) Read(r io.Reader) ([]*Item, error) {
-	var items []*Item
+func (m *IniMapper) Read() ([]*Item, error) {
+	r, err := m.reader()
+	if err != nil {
+		return nil, err
+	}
 
 	cfg, err := ini.Load(r)
 	if err != nil {
 		return nil, err
 	}
+
+	var items []*Item
 
 	for _, section := range cfg.Sections() {
 		if section.Name() == ini.DefaultSection {
@@ -36,7 +48,7 @@ func (m *IniMapper) Read(r io.Reader) ([]*Item, error) {
 			return nil, err
 		}
 
-		d, err := parseAlgorithm(item.Algorithm)
+		d, err := m.parseAlgorithmFn(item.Algorithm)
 		if err != nil {
 			return nil, err
 		}
@@ -54,44 +66,78 @@ func (m *IniMapper) Read(r io.Reader) ([]*Item, error) {
 }
 
 // Write writes config items to writer
-func (m IniMapper) Write(items []*Item, w io.WriteCloser) error {
+func (m IniMapper) Write(items []*Item) error {
+	w, err := m.writer()
+	if err != nil {
+		return err
+	}
+
 	cfg := ini.Empty()
 
 	for _, item := range items {
 		section, err := cfg.NewSection(item.Name)
 		if err != nil {
+			w.Close()
 			return err
 		}
+
 		err = section.ReflectFrom(&item)
 		if err != nil {
+			w.Close()
 			return err
 		}
 	}
 
 	if _, err := cfg.WriteTo(w); err != nil {
+		w.Close()
 		return err
 	}
 
-	if err := w.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return w.Close()
 }
 
-func parseAlgorithm(a string) (func() hash.Hash, error) {
-	if a == "" {
-		a = "sha1"
+func (m IniMapper) reader() (io.Reader, error) {
+	return m.readWriterCloser()
+}
+
+func (m IniMapper) writer() (io.WriteCloser, error) {
+	return m.readWriterCloser()
+}
+
+func (m IniMapper) readWriterCloser() (io.ReadWriteCloser, error) {
+	if m.opts.path == "" {
+		m.opts.path = defaultConfigDir()
 	}
 
-	switch a {
-	case "sha1":
-		return sha1.New, nil
-	case "sha256":
-		return sha256.New, nil
-	case "sha512":
-		return sha512.New, nil
-	default:
-		return nil, fmt.Errorf("unknown algorithm: %s", a)
+	if m.opts.filename == "" {
+		m.opts.filename = defaultConfigName
 	}
+
+	if !pathExists(m.opts.path) {
+		if err := os.Mkdir(m.opts.path, 0700); err != nil {
+			return nil, fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	cfgPath := filepath.Join(m.opts.path, m.opts.filename)
+
+	var getFile func(string) (*os.File, error)
+
+	if !pathExists(cfgPath) {
+		getFile = os.Create
+	} else {
+		getFile = os.Open
+	}
+
+	f, err := getFile(cfgPath)
+	if err != nil {
+		return nil, fmt.Errorf("failied to open config file: %w", err)
+	}
+
+	return f, err
+}
+
+func pathExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !os.IsNotExist(err)
 }
