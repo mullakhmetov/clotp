@@ -1,33 +1,37 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"os"
+
+	"github.com/mullakhmetov/clotp/config"
 )
 
-var secret string
-var at int64
-
-func init() {
-	flag.StringVar(&secret, "secret", "", "Your two-factor secret")
-	flag.Int64Var(&at, "at", 0, "")
+type Command interface {
+	Execute([]string) int
 }
 
 func main() {
-	flag.Parse()
-
-	secret = DecodeBase32Secret(secret)
-
-	totp := NewDefaultTOTP(secret)
-	fmt.Printf("secret: %s\n", secret)
-
-	var token string
-
-	if at == 0 {
-		token = totp.Now()
-	} else {
-		token = totp.At(at)
+	cfg, err := config.NewConfig(config.Opts{})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	fmt.Println(token)
+	var cmd Command
+	if len(os.Args) < 2 {
+		cmd = config.NewCommandList(cfg)
+		os.Exit(cmd.Execute(os.Args[2:]))
+	}
+
+	switch os.Args[1] {
+	case "new":
+		cmd = config.NewCommandNewItem(cfg)
+	case "list", "search":
+		cmd = config.NewCommandList(cfg)
+	case "get":
+		cmd = config.NewCommandGet(cfg)
+	}
+
+	os.Exit(cmd.Execute(os.Args[2:]))
 }
