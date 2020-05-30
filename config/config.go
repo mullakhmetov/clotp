@@ -157,7 +157,7 @@ func NewFromConfigItem(item *Item) *totp.TOTP {
 
 	return totp.NewTOTP(totp.Opts{
 		Digits:    item.Digits,
-		Secret:    item.Key,
+		Secret:    DecodeBase32Secret(item.Key),
 		Algorithm: item.Digest(),
 	}, item.Step)
 }
