@@ -15,6 +15,8 @@ const (
 	defaultAlgorithm  = "sha1"
 )
 
+type parseAlgorithmFn func(string) (func() hash.Hash, error)
+
 var supportedAlgorithms = []string{
 	"sha1",
 	"sha256",
@@ -62,9 +64,10 @@ type mapper interface {
 }
 
 type Config struct {
-	mapper    mapper
-	itemNames map[string]struct{}
-	Items     []*Item
+	mapper           mapper
+	parseAlgorithmFn parseAlgorithmFn
+	itemNames        map[string]struct{}
+	Items            []*Item
 }
 
 // Read reads config via mapper
@@ -122,7 +125,10 @@ func NewConfig(opts Opts) (*Config, error) {
 		opts.filename = defaultConfigName
 	}
 
-	cfg := &Config{mapper: NewIniMapper(opts, parseAlgorithm)}
+	cfg := &Config{
+		mapper:           NewIniMapper(opts, parseAlgorithm),
+		parseAlgorithmFn: parseAlgorithm,
+	}
 
 	if err := cfg.Read(); err != nil {
 		return nil, err

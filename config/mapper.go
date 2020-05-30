@@ -2,15 +2,12 @@ package config
 
 import (
 	"fmt"
-	"hash"
 	"io"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/ini.v1"
 )
-
-type parseAlgorithmFn func(string) (func() hash.Hash, error)
 
 func NewIniMapper(opts Opts, fn parseAlgorithmFn) *IniMapper {
 	path := filepath.Join(opts.path, opts.filename)
@@ -126,7 +123,7 @@ func (m IniMapper) readWriterCloser() (io.ReadWriteCloser, error) {
 	if !pathExists(cfgPath) {
 		getFile = os.Create
 	} else {
-		getFile = os.Open
+		getFile = func(p string) (*os.File, error) { return os.OpenFile(p, os.O_RDWR, 0) }
 	}
 
 	f, err := getFile(cfgPath)
