@@ -8,11 +8,15 @@ import (
 	"hash"
 	"os"
 	"path/filepath"
+
+	"github.com/mullakhmetov/clotp/totp"
 )
 
 const (
 	defaultConfigName = "config.ini"
 	defaultAlgorithm  = "sha1"
+	defaultDigits     = 6
+	defaultStep       = 30
 )
 
 type parseAlgorithmFn func(string) (func() hash.Hash, error)
@@ -135,6 +139,27 @@ func NewConfig(opts Opts) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// NewFromConfigItem creates TOTP from config item object
+func NewFromConfigItem(item *Item) *totp.TOTP {
+	if item.Digits == 0 {
+		item.Digits = defaultDigits
+	}
+
+	if item.Algorithm == "" {
+		item.Algorithm = defaultAlgorithm
+	}
+
+	if item.Step == 0 {
+		item.Step = defaultStep
+	}
+
+	return totp.NewTOTP(totp.Opts{
+		Digits:    item.Digits,
+		Secret:    item.Key,
+		Algorithm: item.Digest(),
+	}, item.Step)
 }
 
 func defaultConfigDir() string {

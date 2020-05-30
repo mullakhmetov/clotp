@@ -21,15 +21,15 @@ func main() {
 	var cmd Command
 	if len(os.Args) < 2 {
 		cmd = config.NewCommandList(cfg)
-		os.Exit(cmd.Execute(os.Args[2:]))
+		os.Exit(cmd.Execute([]string{}))
 	}
 
 	switch os.Args[1] {
-	case "new":
+	case config.CommandNewName:
 		cmd = config.NewCommandNewItem(cfg)
-	case "list", "search":
+	case config.CommandListName:
 		cmd = config.NewCommandList(cfg)
-	case "get":
+	case config.CommandGetName:
 		cmd = config.NewCommandGet(cfg)
 	}
 

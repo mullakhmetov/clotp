@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlecAivazis/survey"
+	"github.com/AlecAivazis/survey/v2"
 )
+
+const CommandListName = "list"
 
 func NewCommandList(cfg *Config) *CommandList {
 	return &CommandList{cfg}
@@ -13,6 +15,10 @@ func NewCommandList(cfg *Config) *CommandList {
 
 type CommandList struct {
 	cfg *Config
+}
+
+func (c CommandList) Help() {
+	fmt.Println("")
 }
 
 func (c CommandList) Execute(_ []string) int {
@@ -23,8 +29,13 @@ func (c CommandList) Execute(_ []string) int {
 		options = append(options, i.Name)
 	}
 
+	if len(options) == 0 {
+		fmt.Println("You have no configured TOTP entities. Run `new` command to create one")
+		return 1
+	}
+
 	q := &survey.Select{
-		Message: "Choose a color:",
+		Message: "Choose a TOTP name:",
 		Options: options,
 		Filter:  myFilter,
 	}
@@ -35,7 +46,8 @@ func (c CommandList) Execute(_ []string) int {
 		return 1
 	}
 
-	fmt.Printf("%+v\n", m[name])
+	t := NewFromConfigItem(m[name])
+	fmt.Println(t.Now())
 
 	return 0
 }

@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+)
+
+const CommandGetName = "get"
 
 func NewCommandGet(cfg *Config) *CommandGet {
 	return &CommandGet{cfg}
@@ -8,6 +12,10 @@ func NewCommandGet(cfg *Config) *CommandGet {
 
 type CommandGet struct {
 	cfg *Config
+}
+
+func (c CommandGet) Help() {
+	fmt.Println("")
 }
 
 func (c CommandGet) Execute(args []string) int {
@@ -27,7 +35,8 @@ func (c CommandGet) Execute(args []string) int {
 	}
 
 	if item != nil {
-		fmt.Printf("%+v", item)
+		t := NewFromConfigItem(item)
+		fmt.Println(t.Now())
 		return 0
 	}
 
