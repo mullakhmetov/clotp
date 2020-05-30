@@ -21,8 +21,8 @@ func (m *stubMapper) Write(items []*Item) error {
 
 func TestConfigRead(t *testing.T) {
 	wantItems := []*Item{
-		{Name: "n1", Key: "k1"},
-		{Name: "n2", Key: "k2"},
+		{Name: "n1", Key: "GE"},
+		{Name: "n2", Key: "GE"},
 	}
 	config := &Config{mapper: &stubMapper{ItemsToRead: wantItems}}
 
@@ -38,8 +38,8 @@ func TestConfigRead(t *testing.T) {
 
 func TestConfigWrite(t *testing.T) {
 	items := []*Item{
-		{Name: "n1", Key: "k1"},
-		{Name: "n2", Key: "k2"},
+		{Name: "n1", Key: "GE"},
+		{Name: "n2", Key: "GE"},
 	}
 	mapper := &stubMapper{}
 	config := &Config{mapper: mapper, Items: items}
@@ -62,7 +62,7 @@ func TestItemValidate(t *testing.T) {
 	}{
 		{
 			name: "no name",
-			item: Item{Key: "1"},
+			item: Item{Key: "GE"},
 			want: false,
 		},
 		{
@@ -77,7 +77,7 @@ func TestItemValidate(t *testing.T) {
 		},
 		{
 			name: "valid",
-			item: Item{Name: "n", Key: "k"},
+			item: Item{Name: "n", Key: "GE"},
 			want: true,
 		},
 	} {
@@ -100,7 +100,7 @@ func TestConfigAdd(t *testing.T) {
 	}{
 		{
 			name: "no name",
-			item: &Item{Key: "1"},
+			item: &Item{Key: "GE"},
 			err:  ErrInvalidItem,
 		},
 		{
@@ -110,21 +110,21 @@ func TestConfigAdd(t *testing.T) {
 		},
 		{
 			name: "negative step",
-			item: &Item{Name: "foo", Key: "bar", Step: -1},
+			item: &Item{Name: "foo", Key: "GE", Step: -1},
 			err:  ErrInvalidItem,
 		},
 		{
 			name: "valid #1",
-			item: &Item{Name: "n", Key: "k"},
+			item: &Item{Name: "n", Key: "GE"},
 		},
 		{
 			name: "duplicate",
-			item: &Item{Name: "n", Key: "k2"},
+			item: &Item{Name: "n", Key: "GE"},
 			err:  ErrItemAlreadyExists,
 		},
 		{
 			name: "valid #2",
-			item: &Item{Name: "n2", Key: "k"},
+			item: &Item{Name: "n2", Key: "GE"},
 		},
 	} {
 		c := c
@@ -152,8 +152,8 @@ func TestConfigAdd(t *testing.T) {
 	}
 
 	want := []*Item{
-		{Name: "n", Key: "k"},
-		{Name: "n2", Key: "k"},
+		{Name: "n", Key: "GE"},
+		{Name: "n2", Key: "GE"},
 	}
 
 	// function type is incomparable
@@ -170,7 +170,7 @@ func TestNewFromConfigItem(t *testing.T) {
 	item := &Item{
 		Name:      "n",
 		Issuer:    "issuer",
-		Key:       "12345678901234567890",
+		Key:       "GE",
 		Algorithm: "sha1",
 		Digits:    6,
 		Step:      30,
@@ -182,7 +182,7 @@ func TestNewFromConfigItem(t *testing.T) {
 		t.Errorf("wrong digits value")
 	}
 
-	if item.Key != totp.Secret {
+	if DecodeBase32Secret(item.Key) != totp.Secret {
 		t.Errorf("wrong secret value")
 	}
 

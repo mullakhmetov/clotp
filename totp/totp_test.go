@@ -84,9 +84,3 @@ func TestTOTP_Now(t *testing.T) {
 		t.Errorf("wrong Now() value")
 	}
 }
-
-func TestAdfs(t *testing.T) {
-	totp := NewTOTP(Opts{Digits: 6, Secret: "tfci3jrtwuwdjlyo", Algorithm: sha1.New}, 30)
-	got := totp.Now()
-	panic(got)
-}
