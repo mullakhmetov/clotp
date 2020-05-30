@@ -1,9 +1,7 @@
-package main
+package totp
 
 import (
 	"time"
-
-	"github.com/mullakhmetov/clotp/config"
 )
 
 const defaultTimeStep = 30
@@ -16,15 +14,6 @@ func NewDefaultTOTP(secret string) *TOTP {
 // NewOTP returns OTP object
 func NewTOTP(opts Opts, timestep int) *TOTP {
 	return &TOTP{NewOTP(opts), timestep}
-}
-
-// NewFromConfigItem creates creates TOTP from config item object
-func NewFromConfigItem(item config.Item) *TOTP {
-	return NewTOTP(Opts{
-		Digits:    item.Digits,
-		Secret:    item.Key,
-		Algorithm: item.Digest(),
-	}, item.Step)
 }
 
 type TOTP struct {
