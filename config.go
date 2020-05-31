@@ -32,9 +32,10 @@ type Item struct {
 	Issuer    string `ini:"issuer,omitempty"`
 	Key       string `ini:"secret"`
 	Algorithm string `ini:"algorithm,omitempty"`
-	digest    func() hash.Hash
-	Digits    int `ini:"digits,omitempty"`
-	Step      int `ini:"step,omitempty"`
+	Digits    int    `ini:"digits,omitempty"`
+	Step      int    `ini:"step,omitempty"`
+
+	digest func() hash.Hash
 }
 
 func (i Item) Validate() bool {
@@ -55,6 +56,26 @@ func (i Item) Validate() bool {
 
 func (i Item) Digest() func() hash.Hash {
 	return i.digest
+}
+
+func (i Item) TOTP() *totp.TOTP {
+	if i.Digits == 0 {
+		i.Digits = defaultDigits
+	}
+
+	if i.Algorithm == "" {
+		i.Algorithm = defaultAlgorithm
+	}
+
+	if i.Step == 0 {
+		i.Step = defaultStep
+	}
+
+	return totp.NewTOTP(totp.Opts{
+		Digits:    i.Digits,
+		Secret:    DecodeBase32Secret(i.Key),
+		Algorithm: i.Digest(),
+	}, i.Step)
 }
 
 type Opts struct {
@@ -139,27 +160,6 @@ func NewConfig(opts Opts) (*Config, error) {
 	}
 
 	return cfg, nil
-}
-
-// NewFromConfigItem creates TOTP from config item object
-func NewFromConfigItem(item *Item) *totp.TOTP {
-	if item.Digits == 0 {
-		item.Digits = defaultDigits
-	}
-
-	if item.Algorithm == "" {
-		item.Algorithm = defaultAlgorithm
-	}
-
-	if item.Step == 0 {
-		item.Step = defaultStep
-	}
-
-	return totp.NewTOTP(totp.Opts{
-		Digits:    item.Digits,
-		Secret:    DecodeBase32Secret(item.Key),
-		Algorithm: item.Digest(),
-	}, item.Step)
 }
 
 func defaultConfigDir() string {

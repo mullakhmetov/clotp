@@ -65,7 +65,7 @@ func TestInitMapper_Read_Create(t *testing.T) {
 		panic(err)
 	}
 
-	if items != nil {
+	if !reflect.DeepEqual(items, []*Item{}) {
 		t.Errorf("items should be nil, got: %+v", items)
 	}
 
@@ -104,6 +104,7 @@ func TestMapper_Read_Open(t *testing.T) {
 		{
 			name:  "check required secret field",
 			input: noSecret,
+			want:  []*Item{},
 		},
 		{
 			name:  "check multiple secrets",

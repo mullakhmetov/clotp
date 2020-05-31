@@ -35,8 +35,8 @@ func (c CommandGet) Execute(args []string) int {
 	}
 
 	if item != nil {
-		t := NewFromConfigItem(item)
-		fmt.Println(t.Now())
+		code := item.TOTP().Now()
+		fmt.Println(code)
 		return 0
 	}
 

@@ -90,6 +90,31 @@ func TestItemValidate(t *testing.T) {
 	}
 }
 
+func TestItemTOTP(t *testing.T) {
+	item := &Item{
+		Name:      "n",
+		Issuer:    "issuer",
+		Key:       "GE",
+		Algorithm: "sha1",
+		Digits:    6,
+		Step:      30,
+	}
+
+	totp := item.TOTP()
+
+	if item.Digits != totp.Digits {
+		t.Errorf("wrong digits value")
+	}
+
+	if DecodeBase32Secret(item.Key) != totp.Secret {
+		t.Errorf("wrong secret value")
+	}
+
+	if item.Step != totp.TimeStep {
+		t.Errorf("wrong timestep value")
+	}
+}
+
 func TestConfigAdd(t *testing.T) {
 	config := Config{}
 
@@ -163,30 +188,5 @@ func TestConfigAdd(t *testing.T) {
 
 	if !reflect.DeepEqual(want, config.Items) {
 		t.Errorf("wrong config items state, want: %+v != got: %+v", want, config.Items)
-	}
-}
-
-func TestNewFromConfigItem(t *testing.T) {
-	item := &Item{
-		Name:      "n",
-		Issuer:    "issuer",
-		Key:       "GE",
-		Algorithm: "sha1",
-		Digits:    6,
-		Step:      30,
-	}
-
-	totp := NewFromConfigItem(item)
-
-	if item.Digits != totp.Digits {
-		t.Errorf("wrong digits value")
-	}
-
-	if DecodeBase32Secret(item.Key) != totp.Secret {
-		t.Errorf("wrong secret value")
-	}
-
-	if item.Step != totp.TimeStep {
-		t.Errorf("wrong timestep value")
 	}
 }

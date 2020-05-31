@@ -46,7 +46,7 @@ func (c CommandList) Execute(_ []string) int {
 		return 1
 	}
 
-	t := NewFromConfigItem(m[name])
+	t := m[name].TOTP()
 	fmt.Println(t.Now())
 
 	return 0
