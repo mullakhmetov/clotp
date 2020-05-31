@@ -33,7 +33,7 @@ func (m *IniMapper) Read() ([]*Item, error) {
 		return nil, err
 	}
 
-	var items []*Item
+	items := make([]*Item, 0)
 
 	for _, section := range cfg.Sections() {
 		if section.Name() == ini.DefaultSection {
@@ -78,7 +78,7 @@ func (m IniMapper) Write(items []*Item) error {
 			return err
 		}
 
-		err = section.ReflectFrom(&item)
+		err = section.ReflectFrom(item)
 		if err != nil {
 			w.Close()
 			return err

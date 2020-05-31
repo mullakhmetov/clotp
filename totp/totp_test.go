@@ -1,7 +1,7 @@
 package totp
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // used in hmac only, see RFC 4226 B.2. section
 	"crypto/sha256"
 	"crypto/sha512"
 	"testing"
@@ -61,6 +61,7 @@ func TestTOTP_At(t *testing.T) {
 			wantValues: []string{"69342147", "63049338", "54380122", "76671578", "56464532", "69481994"},
 		},
 	} {
+		c := c
 		t.Run(c.name, func(t *testing.T) {
 			if len(c.timestamps) != len(c.wantValues) {
 				panic("invalid test table: counters and values len mismatch")

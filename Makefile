@@ -11,6 +11,9 @@ PKGS = $(shell go list ./... | grep -v /vendor/)
 build:
 	go build -o clotp
 
+lint:
+	golangci-lint run ./...
+
 test:
 	go test -race -mod=vendor -timeout=60s -count 1 ./...
 

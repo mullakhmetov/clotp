@@ -1,7 +1,7 @@
 package totp
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // used in hmac only, see RFC 4226 B.2. section
 	"crypto/sha256"
 	"crypto/sha512"
 	"testing"
@@ -99,6 +99,7 @@ func TestGenerate(t *testing.T) {
 			},
 		},
 	} {
+		c := c
 		t.Run(c.name, func(t *testing.T) {
 			if len(c.counters) != len(c.wantValues) {
 				panic("invalid test table: counters and values len mismatch")

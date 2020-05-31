@@ -10,7 +10,7 @@ func DecodeBase32Secret(s string) string {
 
 	missingPadding := len(s) % 8
 	if missingPadding != 0 {
-		s = s + strings.Repeat("=", 8-missingPadding)
+		s += strings.Repeat("=", 8-missingPadding)
 	}
 	bytes, err := base32.StdEncoding.DecodeString(s)
 	if err != nil {

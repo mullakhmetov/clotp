@@ -3,7 +3,7 @@ package totp
 import (
 	"bytes"
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // used in hmac only, see RFC 4226 B.2. section
 	"encoding/binary"
 	"fmt"
 	"hash"
@@ -48,7 +48,7 @@ func (o *OTP) Generate(counter uint64) string {
 		((int(hmacResult[offset+2] & 0xff)) << 8) |
 		(int(hmacResult[offset+3]) & 0xff)
 
-	value := code % int(math.Pow10(int(o.Digits)))
+	value := code % int(math.Pow10(o.Digits))
 
 	return fmt.Sprintf(fmt.Sprintf("%%0%dd", o.Digits), value)
 }

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // used in hmac only, see RFC 4226 B.2. section
 	"hash"
 	"io/ioutil"
 	"os"
