@@ -13,7 +13,7 @@ clotp new
 ```bash
 clotp new -verbose
 ```
-`-verbose` flag allows you to specify hash some extra fields
+`-verbose` flag allows you to specify some extra fields
 
 <img src="doc/new-verbose.gif">
 
