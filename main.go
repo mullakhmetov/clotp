@@ -29,6 +29,8 @@ func main() {
 		cmd = NewCommandList(cfg)
 	case CommandGetName:
 		cmd = NewCommandGet(cfg)
+	default:
+		cmd = NewHelpCommand(cfg)
 	}
 
 	os.Exit(cmd.Execute(os.Args[2:]))
